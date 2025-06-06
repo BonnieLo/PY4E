@@ -18,110 +18,47 @@ import google.api_core.exceptions
 USE_SUMMARY = True  # 是否使用摘要模式
 MAX_MEMORY = 12       # 最多保留幾則 message（建議偶數，表示 3 輪互動）
 chat_session = None  # 全域聊天 session
+memory = [] # 全域記憶（包含 agent 規則）
 
 # ===== Agent 規則 =====
-agent_rules = [{
-    "role": "user",
-    "content": """You are an AI agent that performs actions based on user input.
+from rules import agent_rules
 
-Available tools:
-- list_files(dir: str = ".") -> List[str]: Recursively list all files (excluding hidden files and folders) under the specified directory. Defaults to the current directory.
-- read_file(file_name: str) -> str: Read the content of a file.
-- report(summary: str): Send a final report summary back to the user.
-- terminate(message: str): End the agent loop with a message.
-
-Mission workflow:
-1. Always start by using `list_files` to list all files in the specified directory.
-2. For every file listed, individually call `read_file(file_name)` to read its content.
-3. Do not skip any file unless it is unreadable or irrelevant.
-4. After reading all files, analyze their contents and generate a final summary.
-5. Use the `report` tool to send the summary to the user.
-6. After reporting, use the `terminate` tool to gracefully end the interaction.
-
-Interaction rules:
-- When the user asks about the contents of a specific directory, extract the directory name from their input and pass it as the "dir" argument to the `list_files` tool.
-- Always complete the full file reading and reporting process before termination.
-- If unsure at any step, prioritize completing the full reading and reporting process before deciding to terminate.
-
-Response formatting rules:
-- You must ONLY respond using a single Markdown code block containing a JSON object specifying the tool to invoke.
-- The code block must use the language tag `action`.
-- Do NOT explain, justify, comment, or add any extra text outside the code block.
-- Do NOT wrap your response with additional explanations, confirmations, or commentary, even after completing a report or termination.
-- Any non-action text will be treated as an invalid response and ignored.
-
-Reporting formatting rules:
-- When using the `report` tool, organize your findings with a clear bullet point structure:
-  - List each file separately with a bullet point (`-`).
-  - Start each bullet point with the filename.
-  - After the filename, provide a concise description of the file’s purpose or contents.
-  - Keep the report clean, readable, and avoid long paragraphs.
-
-Example report format:
-
-- `main.py`: The main orchestrator script for the AI agent.
-- `analyzer.py`: Functions for analyzing Python files.
-- `prompt_utils.py`: Handles prompt formatting and Gemini API interaction.
-
-Correct action invocation format example:
-
-```action
-{
-  "tool_name": "list_files",
-  "args": {
-    "dir": "OpenAI"
-  }
+# 工具 schema 模擬表
+tool_schemas = {
+    "list_files": {
+        "description": "Recursively list all files under a directory.",
+        "parameters": {
+            "dir": {"type": "string", "required": False, "default": "."}
+        }
+    },
+    "read_file": {
+        "description": "Read the content of a file.",
+        "parameters": {
+            "file_name": {"type": "string", "required": True}
+        }
+    },
+    "report": {
+        "description": "Report a summary back to the user.",
+        "parameters": {
+            "summary": {"type": "string", "required": True}
+        }
+    },
+    "terminate": {
+        "description": "End the conversation.",
+        "parameters": {
+            "message": {"type": "string", "required": True}
+        }
+    }
 }
-""" }]
 
-
-memory = []
-
+# ===== 初始化 =====
 # 載入 .env 中的 GOOGLE_API_KEY
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 # 對應的 Gemini 模型（你可以用 gemini-1.5-pro-latest 或其他支援的）
 model = genai.GenerativeModel("gemini-1.5-pro-latest")
-# This part of code is response from keyword to action not from AI.
-# It works but it's not the best way to do it.
 
-#def generate_response(prompt):
-#    last_input = prompt[-1]['content']
-
-    # 建立語意分類的關鍵字字典
-#    file_query_keywords = ["what files", "list files", "檔案", "目錄", "有什麼"]
-#    read_file_keywords = ["read", "open", "讀取", "打開"]
-
-    # 統一轉小寫處理（英文）
-#    lower_input = last_input.lower()
-
-#    print(f"User Input: {last_input}")
-
-#    if any(keyword in last_input for keyword in file_query_keywords) or any(keyword in lower_input for keyword in file_query_keywords):
-#        return '''
-#            ```action
-#            {
-#                "tool_name": "list_files",
-#                "args": {}
-#            }
-#            ```'''
-#    elif any(keyword in last_input for keyword in read_file_keywords) or any(keyword in lower_input for keyword in read_file_keywords):
-#        return '''
-#            ```action
-#            {
-#                "tool_name": "read_file",
-#                "args": {"file_name": "file1.txt"}
-#            }
-#            ```'''
-#    else:
-#        return '''
-#            ```action
-#            {
-#                "tool_name": "terminate",
-#                "args": {"message": "No further action needed."}
-#            }
-#            ```'''
-
+# ===== 工具函數 =====
 def generate_response(messages: List[Dict]) -> str:
     """使用 Gemini chat session 來取得回應"""
 
@@ -182,12 +119,33 @@ def parse_action(response: str) -> Dict:
     except Exception as e:
         print(f"⚠️ Warning: Invalid response detected: {str(e)}")
         return {"tool_name": "error", "args": {"message": "Invalid or non-action response received."}}
+    
+def validate_args(tool_name: str, args: dict) -> (bool, str):
+    if tool_name not in tool_schemas:
+        return False, f"Unknown tool: {tool_name}"
+
+    schema = tool_schemas[tool_name]["parameters"]
+
+    # 檢查必要參數是否都有提供
+    for param, spec in schema.items():
+        if spec.get("required", False) and param not in args:
+            return False, f"Missing required argument: '{param}' for tool '{tool_name}'"
+
+        # 檢查參數類型是否正確（若有提供）
+        if param in args:
+            expected_type = spec["type"]
+            actual_value = args[param]
+            if expected_type == "string" and not isinstance(actual_value, str):
+                return False, f"Argument '{param}' must be a string"
+            # 你也可以延伸支援 int, bool, list, dict 等類型
+
+    return True, "OK"
 
 def list_files(dir="."):
     files = []
 
     if not os.path.isdir(dir):
-        return [f"Error: {dir} is not a valid directory."]
+        return f"Error: {dir} is not a valid directory."
     for dirpath, dirnames, filenames in os.walk(dir):
         dirnames[:] = [d for d in dirnames if not d.startswith('.')]
         for f in filenames:
@@ -240,6 +198,15 @@ def report(summary):
     print(summary.strip())
     print("────────────────────────\n")
 
+# ===== 工具函數對應 =====
+# 將工具函數對應到 agent 的 action
+tool_functions = {
+    "list_files": list_files,
+    "read_file": read_file,
+    "report": lambda summary: print(f"..."),
+    "terminate": lambda message: print(f"...")
+}
+
 # ===== 執行流程：初版（僅處理一支範例程式碼） =====
 def agent_loop():
     global memory
@@ -261,24 +228,30 @@ def agent_loop():
         # Step 3: 解析回應
         action = parse_action(response)
 
-        # Step 4: 執行工具
-        if action["tool_name"] == "list_files":
-            dir_to_scan = action["args"].get("dir", ".")
+        # Step 4: 驗證參數 → 執行工具
+        tool_name = action["tool_name"]
+        tool_args = action.get("args", {})
+
+        # 驗證參數是否正確
+        is_valid, validation_msg = validate_args(tool_name, tool_args)
+
+        if not is_valid:
+            result = {"error": validation_msg}
+        elif tool_name == "list_files":
+            dir_to_scan = tool_args.get("dir", ".")
             result = {"result": list_files(dir_to_scan)}
-        elif action["tool_name"] == "read_file":
-            result = {"result": read_file(action["args"]["file_name"])}
-        elif action["tool_name"] == "error":
-            result = {"error": action["args"]["message"]}
-        elif action["tool_name"] == "terminate":
-            print(f"\n🎯 Agent Termination Message: {action['args']['message']}")
+        elif tool_name == "read_file":
+            result = {"result": read_file(tool_args["file_name"])}
+        elif tool_name == "terminate":
+            print(f"\n🎯 Agent Termination Message: {tool_args['message']}")
             print("✅ Termination detected. Ending agent loop cleanly.")
-            break  # 強制結束，不再處理後面任何 LLM output
-        elif action["tool_name"] == "report":
-            summary = action["args"].get("summary", "")
+            break
+        elif tool_name == "report":
+            summary = tool_args.get("summary", "")
             report(summary)
             result = {"result": f"Report sent: {summary}"}
         else:
-            result = {"error": "Unknown action: " + action["tool_name"]}
+            result = {"error": f"Unknown action: {tool_name}"}  
 
         # Step 5: 更新記憶
         # The assistant role captures the structured response generated by the LLM.

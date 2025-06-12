@@ -2,6 +2,10 @@ from game.goal import Goal
 from game.actions import registry
 import google.generativeai as genai
 import json
+from game.memory import Memory
+from game.environment import Environment
+
+memory = Memory()
 
 story_analysis_goal = Goal(
     priority=1,
@@ -48,19 +52,31 @@ sentences = {
 }"""
 
 print("\n🧠 Unified Story Analysis — AI vs non-AI\n")
+
+env = Environment(registry)  # ✅ 建立 Environment 實例
 for key, s in sentences.items():
     print(f"\n📘 [{key}] → {s}")
 
     # 原版
-    r1 = registry.get_action("analyze_sentiment").execute(text=s)
-    r2 = registry.get_action("classify_topics").execute(text=s)
+    #r1 = registry.get_action("analyze_sentiment").execute(text=s)
+    #r2 = registry.get_action("classify_topics").execute(text=s)
 
-    # Gemini 版
-    r1_ai = registry.get_action("analyze_sentiment_ai").execute(text=s)
-    r2_ai = registry.get_action("classify_topics_ai").execute(text=s)
+    # Gemini 版（改用 Environment 執行）
+    r1_ai = env.execute("analyze_sentiment_ai", {"text": s})
+    r2_ai = env.execute("classify_topics_ai", {"text": s})
 
-    print(f"💡 Sentiment [rule-based]: {r1}")
+    # 加入記憶（Gemini 分析結果）
+    memory.add_memory({
+        "text": s,
+        "sentiment": r1_ai,
+        "topics": r2_ai
+    })
+
+    #print(f"💡 Sentiment [rule-based]: {r1}")
     print(f"🤖 Sentiment [Gemini AI ]: {r1_ai}")
-    print(f"🏷️ Topics   [rule-based]: {r2['topics']}")
+    #print(f"🏷️ Topics   [rule-based]: {r2['topics']}")
     print(f"🤖 Topics   [Gemini AI ]: {r2_ai['topics']}\n")
 
+print("🧠 Memory Snapshot:")
+for item in memory.get_memories():
+    print(item)

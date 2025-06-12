@@ -3,6 +3,25 @@ import requests
 from datetime import datetime, timedelta, timezone
 from collections import Counter
 
+"""
+TODOs for this script:
+
+✅ Completed:
+- Implemented Script 1 to fetch PR and reviewer statistics from OpenBMC repos (past 30 days)
+- Implemented Script 2 to identify the most frequently changed directories in the `openbmc` repo (past 30 days)
+- Used GitHub GraphQL API only (no local git clone required)
+- Output results directly in terminal using markdown-style tables
+- Filtered out unrelated vendor repos, keeping only target vendors (e.g. meta-facebook, meta-phosphor)
+
+🔜 Next Actions:
+- Extract all commit messages and file paths from top changed directories (e.g., `meta-phosphor/recipes-phosphor`)
+- Send commit content to Gemini AI for summarization and change analysis
+- Build a reusable commit-analysis pipeline for other repos/directories
+- Refactor scripts for modularity and add docstrings for clarity
+- Add `.gitignore` to exclude unnecessary files like `__pycache__`
+- (Optional) Design a lightweight web UI for interactive analysis
+"""
+
 # === 設定 GitHub Token 與 Headers ===
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 print("🔑 使用 GitHub Token:", GITHUB_TOKEN)

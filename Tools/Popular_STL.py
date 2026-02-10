@@ -17,7 +17,7 @@ def analyze_cpp_stl_usage(base_path):
                 try:
                     with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                         for idx, line in enumerate(f, 1):
-                            matches = stl_pattern.findall(line)
+                            matches = stl_pattern.findall(line)ㄒㄛ 
                             for match in matches:
                                 stl_usage[match]["count"] += 1
                                 rel_path = os.path.relpath(file_path, base_path)

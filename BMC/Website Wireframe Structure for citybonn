@@ -1,0 +1,117 @@
+Website Wireframe Structure for citybonnieontherun.com
+
+Home Page
+
+Logo: "City Bonnie" (Winky Sans)
+
+Navigation Links:
+
+Home
+
+Technology
+
+Design
+
+About
+
+Hero Section: Welcome / Featured message (TBD - under discussion)
+
+Highlight: Personal Quote or Slogan
+
+Technology Page
+
+Section: Project Demos (Loom video embeds)
+
+Section: AI Agent Showcase (e.g., repopilot) — Consider gallery view for multiple agents/tools
+
+Section: Quick Tech Notes
+
+Section: Cross-cultural Tech Observations — Optional gallery if visual comparisons are used
+
+Design Page
+
+Section: Illustration Style & Character Bios
+
+Section: Original Universe (Rabbit, Polar Bear, Little Girl)
+
+Section: Sketch Note Cards (AI-assisted layout)
+
+Section: Coffee Character Series
+
+Section: Postcard Projects
+
+Subsection: Postcard Map (interactive or gallery)
+
+Subsection: Postcards for Strangers (IG highlight style)
+
+Subsection: Food Postcards
+
+Taiwan food from abroad
+
+Travel food from Taiwan
+
+Data Page
+
+Section: Data Art Learning Journey
+
+Section: AI + Creative Experiments
+
+Section: Python Data Visualization Projects
+
+Section: Mixed Media Explorations (code + art)
+
+Business Page
+
+Section: Startup Journey Logs
+
+Section: Personal Branding + Time Flow
+
+Section: Smart Home Philosophy
+
+Section: Studio Values and Concept
+
+"一直在的家，最懂你的它"
+
+(Future) Virtual/Physical Demo Plans
+
+Other Ideas to Add Later
+
+Section: Notion Notes Public Collection
+
+Section: Downloadable Postcard files
+
+Section: English Learning Diaries
+
+Section: Message to Future Self / Blog
+
+Notes:
+
+Use grid-based layout
+
+Keep colors in tea-milk beige + green + soft pink palette
+
+Integrate visual storytelling elements
+
+Icons or soft line dividers to distinguish sections
+
+
+
+  <section>
+    <h2>📍 Pin a place you love</h2>
+    <p>你想推薦我去哪裡散步、喝咖啡、寫程式嗎？歡迎留言給我，我會在那個城市想起你。</p>
+  
+    <form action="https://formspree.io/f/meoapdnl" method="POST" class="form-pin">
+      <label>
+        Your email:<br>
+        <input type="email" name="email" required>
+      </label><br><br>
+  
+      <label>
+        Your message:<br>
+        <textarea name="message" rows="5" required></textarea>
+      </label><br><br>
+  
+      <button type="submit">📩 Send</button>
+    </form>
+  </section>
+

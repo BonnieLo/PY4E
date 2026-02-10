@@ -8,6 +8,7 @@ import re
 # 環境變數中獲取 API 金鑰
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
+
 # 初始化 Gemini 模型
 #GEMINI_MODEL = "gemini-1.5-pro-latest"
 GEMINI_MODEL = "models/gemini-1.5-flash-latest"
